@@ -1,26 +1,4 @@
-/**
- * Обработчик события выделения узла дерева
- */
-mycontrol.onSelectTreeNode = function(event) {
-	// IE
 
-	if ($.browser.msie) {
-		window.event.cancelBubble = true;
-	}
-	if (event.stopPropagation) {
-		event.stopPropagation();
-	}
-
-	var treeControl = this.treeControl;
-	var setClosed = (this.opened==null?false:this.opened);
-	this.opened = !setClosed;
-	var nodeHash = treeControl.getNodeHash(this);
-	hutils.loadHistory(nodeHash);
-	//treeControl.selectTreeNode(this, true, false, setClosed);
-	//alert("Li selected: " + this.id);
-
-	return false;
-};
 
 /**
  * В указанном дереве открыть указанный узел

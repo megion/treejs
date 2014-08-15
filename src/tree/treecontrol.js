@@ -1,3 +1,60 @@
+var mycontrol = {};
+
+
+mycontrol.loadHistory = function (hash) {
+	// Logger.append('[load history] hash=' + hash);
+	$.history.load(hash);
+};
+
+/**
+ * Обработчик события выделения узла дерева
+ */
+mycontrol.onSelectTreeNode = function(event) {
+	// IE
+
+	if ($.browser.msie) {
+		window.event.cancelBubble = true;
+	}
+	if (event.stopPropagation) {
+		event.stopPropagation();
+	}
+
+	var treeControl = this.treeControl;
+	var setClosed = (this.opened==null?false:this.opened);
+	this.opened = !setClosed;
+	var nodeHash = treeControl.getNodeHash(this);
+	mycontrol.loadHistory(nodeHash);
+	//treeControl.selectTreeNode(this, true, false, setClosed);
+	//alert("Li selected: " + this.id);
+
+	return false;
+};
+
+
+
+/**
+ * History call back. Load new content form server by AJAX.
+ * 
+ * @param anchor
+ */
+mycontrol.pageload = function (hash) {
+	var treeUl = document.getElementById("treePages");
+	var treeControl = treeUl.tree;
+	treeControl.detectAnchor(hash);
+};
+
+/**
+ * Initialize and use browser history
+ */
+$(document).ready(function() {
+	//if ($.browser.msie && $.browser.version == 8) {
+		// Logger.append('You are using IE8 in version ' + document.documentMode
+		// + ' compatible mode.');
+	//}
+	// Logger.append('The plugin is running in ' + $.history.type + ' mode.');
+	$.history.init(mycontrol.pageload);
+});
+
 /**
  * Предопределенные CSS классы для дерева
  */
@@ -57,6 +114,8 @@ mycontrol.TreeControl.prototype.init = function() {
 	
 	var newSubnodes = this.treeObject.topnodes;
 	this.appendNewNodes(this.treeUlHtml, newSubnodes);
+	
+	$.history.init(hutils.pageload);
 };
 
 /**
@@ -86,7 +145,7 @@ mycontrol.TreeControl.prototype.updateExistUlNodesContainer = function(
 	var newNodesByKey = new Object();
 	for ( var i = 0; i < newNodes.length; i++) {
 		var newNode = newNodes[i];
-		newNodesByKey[newNode.nodeKey] = newNode;
+		newNodesByKey[newNode.id] = newNode;
 	}
 
 	// подготовить old nodes HashMaps (key->nodeId, value->node), который будет
@@ -95,11 +154,11 @@ mycontrol.TreeControl.prototype.updateExistUlNodesContainer = function(
 	var oldNodesByKey = new Object();
 	for ( var i = 0; i < oldNodes.length; i++) {
 		var oldNode = oldNodes[i];
-		if (newNodesByKey[oldNode.nodeKey] == null) {
+		if (newNodesByKey[oldNode.id] == null) {
 			// узел был удален
 			this.deleteExistSubNode(ulContainer, oldNode);
 		} else {
-			oldNodesByKey[oldNode.nodeKey] = oldNode;
+			oldNodesByKey[oldNode.id] = oldNode;
 		}
 	}
 
@@ -109,13 +168,13 @@ mycontrol.TreeControl.prototype.updateExistUlNodesContainer = function(
 		if (i == (newNodes.length - 1)) {
 			newNode.isLast = true;
 		}
-		var oldNode = oldNodesByKey[newNode.nodeKey];
+		var oldNode = oldNodesByKey[newNode.id];
 		if (oldNode) {
 			var oldNodeLi = oldNode.nodeLi;
 			if (i < oldNodes.length) {
 				// старый узел находящийся на том же месте
 				var mirrorOldNode = oldNodes[i];
-				if (mirrorOldNode.nodeKey == newNode.nodeKey) {
+				if (mirrorOldNode.id == newNode.id) {
 					// находится на том же месте
 				} else {
 					// необходимо перемещение
@@ -144,7 +203,7 @@ mycontrol.TreeControl.prototype.updateExistNode = function(nodeLi, newNodeModel)
 	// 1. обновление модели узла. Перекрестная ссылка.
 	newNodeModel.nodeLi = nodeLi;
 	nodeLi.nodeModel = newNodeModel;
-	this.allNodesMap[newNodeModel.nodeKey] = newNodeModel;
+	this.allNodesMap[newNodeModel.id] = newNodeModel;
 
 	// 2. обновление визуальной информации узла
 	this.updateVisualNodeLi(nodeLi, newNodeModel);
@@ -228,7 +287,7 @@ mycontrol.TreeControl.prototype.setDragAndDropChildNode = function(nodeSpan) {
  */
 mycontrol.TreeControl.prototype.appendNewNode = function(parentUl, newNode) {
 	var newLi = document.createElement("li");
-	newLi.setAttribute("id", newNode.nodeKey);
+	newLi.setAttribute("id", newNode.id);
 	newLi.onclick = mycontrol.onSelectTreeNode;
 	parentUl.appendChild(newLi);
 
@@ -237,7 +296,7 @@ mycontrol.TreeControl.prototype.appendNewNode = function(parentUl, newNode) {
 	var hasChildren = (subnodes != null && subnodes.length > 0);
 
 	var nodeSpan = document.createElement("span");
-	nodeSpan.setAttribute("id", "s" + newNode.nodeKey);
+	nodeSpan.setAttribute("id", "s" + newNode.id);
 	nodeSpan.setAttribute("class", mycontrol.LINE_TREE_CLASSES.treeNode);
 	nodeSpan.innerHTML = newNode.title;
 	newLi.appendChild(nodeSpan);
@@ -254,7 +313,7 @@ mycontrol.TreeControl.prototype.appendNewNode = function(parentUl, newNode) {
 	newLi.nodeModel = newNode;
 	newNode.nodeLi = newLi;
 
-	this.allNodesMap[newNode.nodeKey] = newNode;
+	this.allNodesMap[newNode.id] = newNode;
 
 	// добавить детей
 	if (hasChildren) {
@@ -303,7 +362,7 @@ mycontrol.TreeControl.prototype.deleteExistSubNode = function(parentUl,
 	deletedLi.nodeSpan = null;
 	deletedLi.subnodesUl = null;
 	deletedLi.treeControl = null;
-	this.allNodesMap[deletedNode.nodeKey] = null;
+	this.allNodesMap[deletedNode.id] = null;
 	parentUl.removeChild(deletedLi);
 };
 
@@ -341,7 +400,7 @@ mycontrol.TreeControl.prototype.feedChildNodes = function(nodeLi) {
 		url : this.feedChildNodesUrl,
 		dataType : "json",
 		data : {
-			"nodeKey" : nodeModel.nodeKey
+			"id" : nodeModel.id
 		},
 		success : function(loadedData) {
 			mytree.updateExistNode(nodeLi, loadedData);
@@ -364,7 +423,7 @@ mycontrol.TreeControl.prototype.feedTreeScopeNodes = function(nodeId) {
 		url : this.feedTreeScopeNodesUrl,
 		dataType : "json",
 		data : {
-			"nodeKey" : nodeId
+			"id" : nodeId
 		},
 		success : function(loadedData) {
 			mytree.updateExistUlNodesContainer(mytree.treeUlHtml,
@@ -523,11 +582,11 @@ mycontrol.TreeControl.prototype.openNode = function(nodeLi, setClosed) {
  * @returns {String}
  */
 mycontrol.TreeControl.prototype.getNodeHash = function(nodeLi) {
-	var nodeKey = nodeLi.nodeModel.nodeKey;
+	var id = nodeLi.nodeModel.id;
 	if (nodeLi.opened!=null && !nodeLi.opened) {
-		nodeKey = nodeKey + "?state=closed";
+		id = id + "?state=closed";
 	}
-	return "prod-" + nodeKey;
+	return "id-" + id;
 };
 
 mycontrol.TreeControl.prototype.getNodeInfoByAnchor = function(anchor) {
