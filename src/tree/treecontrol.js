@@ -112,10 +112,8 @@ mycontrol.TreeControl.prototype.init = function() {
 
 	this.autoScrollContainer = new AutoScrollContainer(this.treeContainer);
 	
-	var newSubnodes = this.treeObject.topnodes;
+	var newSubnodes = this.treeObject;
 	this.appendNewNodes(this.treeUlHtml, newSubnodes);
-	
-	$.history.init(hutils.pageload);
 };
 
 /**
@@ -124,7 +122,7 @@ mycontrol.TreeControl.prototype.init = function() {
 mycontrol.TreeControl.prototype.updateExistUlNodesContainer = function(
 		ulContainer, newNodes, oldNodes) {
 	if (oldNodes == null) {
-		log("Old nodes must not be null");
+		//console.error("Old nodes must not be null");
 	}
 
 	// новых узлов нет
@@ -197,8 +195,8 @@ mycontrol.TreeControl.prototype.updateExistUlNodesContainer = function(
  */
 mycontrol.TreeControl.prototype.updateExistNode = function(nodeLi, newNodeModel) {
 	var oldNodeModel = nodeLi.nodeModel;
-	var oldSubnodes = oldNodeModel.subnodes;
-	var newSubnodes = newNodeModel.subnodes;
+	var oldSubnodes = oldNodeModel.children;
+	var newSubnodes = newNodeModel.children;
 
 	// 1. обновление модели узла. Перекрестная ссылка.
 	newNodeModel.nodeLi = nodeLi;
@@ -247,7 +245,7 @@ mycontrol.TreeControl.prototype.updateExistNode = function(nodeLi, newNodeModel)
 mycontrol.TreeControl.prototype.enableChildren = function(nodeLi, enable) {
 	if (enable) {
 		if (nodeLi.subnodesUl) {
-			log("Ошибка вызова: узел имеет детей");
+			console.error("Ошибка вызова: узел имеет детей");
 		} else {
 			var hitareaDiv = document.createElement("div");
 			hitareaDiv.setAttribute("class", mycontrol.LINE_TREE_CLASSES.hitarea + " " +  mycontrol.LINE_TREE_CLASSES.closedHitarea);
@@ -269,7 +267,7 @@ mycontrol.TreeControl.prototype.enableChildren = function(nodeLi, enable) {
 			nodeLi.hitareaDiv = null;
 			nodeLi.nodeModel.hasChildren = false;
 		} else {
-			log("Ошибка вызова: узел не имеет детей");
+			console.error("Ошибка вызова: узел не имеет детей");
 		}
 	}
 };
@@ -291,7 +289,7 @@ mycontrol.TreeControl.prototype.appendNewNode = function(parentUl, newNode) {
 	newLi.onclick = mycontrol.onSelectTreeNode;
 	parentUl.appendChild(newLi);
 
-	var subnodes = newNode.subnodes;
+	var subnodes = newNode.children;
 
 	var hasChildren = (subnodes != null && subnodes.length > 0);
 
@@ -345,7 +343,7 @@ mycontrol.TreeControl.prototype.deleteExistSubNode = function(parentUl,
 	var deletedLi = deletedNode.nodeLi;
 
 	// рекурсивно удалить и все дочерние узлы
-	var subnodes = deletedNode.subnodes;
+	var subnodes = deletedNode.children;
 	if (subnodes != null && subnodes.length > 0) {
 		var subnodesUlContainer = deletedLi.subnodesUl;
 		for ( var i = 0; i < subnodes.length; i++) {
@@ -392,7 +390,7 @@ mycontrol.TreeControl.prototype.updateVisualNodeLi = function(nodeLi, newNode) {
  *            обновляемый узел
  */
 mycontrol.TreeControl.prototype.feedChildNodes = function(nodeLi) {
-	log("Start loading feedChildNodes");
+	console.log("Start loading feedChildNodes");
 	utils.showLoadingStatus(true);
 	var nodeModel = nodeLi.nodeModel;
 	var mytree = this;
@@ -400,10 +398,11 @@ mycontrol.TreeControl.prototype.feedChildNodes = function(nodeLi) {
 		url : this.feedChildNodesUrl,
 		dataType : "json",
 		data : {
-			"id" : nodeModel.id
+			"nodeId" : nodeModel.id
 		},
 		success : function(loadedData) {
-			mytree.updateExistNode(nodeLi, loadedData);
+			// loadedData is array
+			mytree.updateExistNode(nodeLi, loadedData[0]);
 			utils.showLoadingStatus(false);
 		}
 	});
@@ -416,20 +415,25 @@ mycontrol.TreeControl.prototype.feedChildNodes = function(nodeLi) {
  *            обновляемый узел
  */
 mycontrol.TreeControl.prototype.feedTreeScopeNodes = function(nodeId) {
-	log("Start loading feedTreeScopeNodes");
+	console.log("Start loading feedTreeScopeNodes");
 	utils.showLoadingStatus(true);
 	var mytree = this;
 	$.ajax({
 		url : this.feedTreeScopeNodesUrl,
 		dataType : "json",
 		data : {
-			"id" : nodeId
+			"nodeId" : nodeId
 		},
 		success : function(loadedData) {
 			mytree.updateExistUlNodesContainer(mytree.treeUlHtml,
-					loadedData.topnodes, mytree.treeObject.topnodes);
-			mytree.treeObject = loadedData;
+					loadedData, mytree.treeObject);
+			
+			// loadedData is array
 			var nodeLi = document.getElementById(nodeId);
+			//mytree.updateExistNode(nodeLi, loadedData[0]);
+			
+			mytree.treeObject = loadedData;
+			
 			mytree.openNode(nodeLi, false);
 			utils.showLoadingStatus(false);
 		}
@@ -461,7 +465,7 @@ mycontrol.TreeControl.prototype.selectTreeNode = function(nodeLi,
 	nodeSpan.setAttribute("class", CLASSES.treeNode + " " + CLASSES.selectedNode);
 	this.currentSelectedTreeNodeSpan = nodeSpan;
 
-	var requireLoading = nodeLi.nodeModel.requireLoading;
+	var requireLoading = nodeLi.nodeModel.needLoad;
 	if (requireLoading) {
 		if (enableLoading) {
 			this.feedChildNodes(nodeLi);
