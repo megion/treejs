@@ -85,10 +85,9 @@ mycontrol.LINE_TREE_CLASSES = {
  *            сервера и загружается вместе c страницей в текстовом представлении
  *            JSON
  */
-mycontrol.TreeControl = function(treeId, feedChildNodesUrl,
+mycontrol.TreeControl = function(treeUl, feedChildNodesUrl,
 		feedTreeScopeNodesUrl, enableDragAndDrop, treeObject) {
-	this.treeId = treeId;
-	this.treeUlHtml = null;
+	this.treeUl = treeUl;
 	this.treeContainer = null;
 	// this.treeviewObj = null;
 	this.treeObject = treeObject;
@@ -106,14 +105,15 @@ mycontrol.TreeControl = function(treeId, feedChildNodesUrl,
  */
 mycontrol.TreeControl.prototype.init = function() {
 	// запомнить объект дерева в DOM элементе дерева
-	this.treeUlHtml = document.getElementById(this.treeId);
-	this.treeUlHtml.tree = this;
-	this.treeContainer = this.treeUlHtml.parentNode;
+	//this.treeUlHtml = document.getElementById(this.treeId);
+	
+	this.treeUl.tree = this; // use only for history. need refactoring
+	this.treeContainer = this.treeUl.parentNode;
 
 	this.autoScrollContainer = new AutoScrollContainer(this.treeContainer);
 	
 	var newSubnodes = this.treeObject;
-	this.appendNewNodes(this.treeUlHtml, newSubnodes);
+	this.appendNewNodes(this.treeUl, newSubnodes);
 };
 
 /**
@@ -425,7 +425,7 @@ mycontrol.TreeControl.prototype.feedTreeScopeNodes = function(nodeId) {
 			"nodeId" : nodeId
 		},
 		success : function(loadedData) {
-			mytree.updateExistUlNodesContainer(mytree.treeUlHtml,
+			mytree.updateExistUlNodesContainer(mytree.treeUl,
 					loadedData, mytree.treeObject);
 			
 			// loadedData is array
@@ -477,7 +477,7 @@ mycontrol.TreeControl.prototype.processAllParentNode = function(nodeLi,
 		processNode) {
 	var nodeUl = nodeLi.parentNode;
 	if (nodeUl.nodeName.toLowerCase() == "ul") {
-		if (nodeUl.id && nodeUl.id == this.treeId) {
+		if (nodeUl.id && nodeUl.id == this.treeUl.id) {
 			// конец дерева
 			return;
 		}
