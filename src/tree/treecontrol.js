@@ -88,7 +88,6 @@ mycontrol.LINE_TREE_CLASSES = {
 mycontrol.TreeControl = function(treeUl, feedChildNodesUrl,
 		feedTreeScopeNodesUrl, enableDragAndDrop, treeObject) {
 	this.treeUl = treeUl;
-	this.treeContainer = null;
 	// this.treeviewObj = null;
 	this.treeObject = treeObject;
 	this.feedChildNodesUrl = feedChildNodesUrl;
@@ -108,12 +107,9 @@ mycontrol.TreeControl.prototype.init = function() {
 	//this.treeUlHtml = document.getElementById(this.treeId);
 	
 	this.treeUl.tree = this; // use only for history. need refactoring
-	this.treeContainer = this.treeUl.parentNode;
-
-	this.autoScrollContainer = new AutoScrollContainer(this.treeContainer);
 	
-	var newSubnodes = this.treeObject;
-	this.appendNewNodes(this.treeUl, newSubnodes);
+	this.autoScrollContainer = new AutoScrollContainer(this.treeUl.parentNode);
+	this.appendNewNodes(this.treeUl, this.treeObject);
 };
 
 /**
